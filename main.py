@@ -10,6 +10,7 @@ Description:
 from datetime import datetime, timezone
 import os
 import sys
+import re
 import socket
 import random
 import logging
@@ -122,52 +123,55 @@ def get_thematic_image() -> str:
     return random.choice(image_list)
 
 
+SYSTEM_PROMPT = """You are 'LucidDreamsBot', an expert Sri Lankan Tech Content Creator. 
+Your job is to automatically write highly engaging tech Facebook posts based on the topics provided to you. 
+Whenever you generate a post, you MUST strictly obey the following absolute rules:
+
+1. CORE LANGUAGE & TONE: Write the post entirely in natural, everyday conversational Sinhala script. Write exactly how a Sri Lankan would speak to a friend. Do not use formal, robotic translated language.
+2. ZERO FOREIGN CHARACTERS (CRITICAL): You are STRICTLY FORBIDDEN from using Hindi, Tamil, or any other foreign language characters. The output must contain ONLY Sinhala characters (and the limited English words allowed below).
+3. ENGLISH WORD LIMIT (STRICT): You are allowed a MAXIMUM of 5 English words in the entire post. Use them ONLY for unavoidable technical terms or specific App names. 
+4. NO ENGLISH IN BRACKETS: Never translate or explain Sinhala words by putting English words inside brackets (e.g., do NOT write "දත්ත (Data)"). If a technical term is needed, just transliterate it in Sinhala script.
+5. FORMATTING & STRUCTURE: No long paragraphs. Use short sentences and bullet points. Use 3 to 5 relevant emojis. You MUST include clear, actionable instructions formatted as 'පියවර 1:', 'පියවර 2:', etc.
+6. CALL TO ACTION (CTA): End every post with a specific, engaging question related to the topic.
+7. IMAGE GENERATION PROMPT: At the very end of your response, provide an English image generation prompt enclosed in [IMAGE_PROMPT: ...]. The image MUST perfectly and logically match the EXACT context of the post."""
+
+
 def generate_sinhala_post(api_key: str) -> str:
     """
-    Generate an engaging daily technology trend post in Sinhala using Gemini API.
+    Generate an engaging daily technology trend post in Sinhala using Gemini API
+    following the strict LucidDreamsBot rules.
     """
     logger.info("Initializing Google Gemini API client...")
     try:
         genai.configure(api_key=api_key)
         
-        # Active Free-Tier High Efficiency Models with fallback
+        todays_theme = get_daily_theme()
+        logger.info("Today's technology focus theme: %s", todays_theme)
+
+        # Active Free-Tier High Efficiency Models with fallback and system_instruction
         model_names = ["gemini-flash-lite-latest", "gemini-flash-latest"]
         model = None
         for name in model_names:
             try:
-                model = genai.GenerativeModel(model_name=name)
+                model = genai.GenerativeModel(
+                    model_name=name,
+                    system_instruction=SYSTEM_PROMPT
+                )
                 break
             except Exception:
                 continue
 
         if not model:
-            model = genai.GenerativeModel(model_name="gemini-flash-lite-latest")
+            model = genai.GenerativeModel(
+                model_name="gemini-flash-lite-latest",
+                system_instruction=SYSTEM_PROMPT
+            )
 
-        todays_theme = get_daily_theme()
-        logger.info("Today's technology focus theme: %s", todays_theme)
+        user_prompt = f"Write an engaging tech Facebook post on today's focus topic: {todays_theme}."
 
-        system_prompt = (
-            "You are an expert social media tech content creator for a popular Sri Lankan technology page. "
-            "You write completely in natural, engaging, and grammatically sound Sinhala (සිංහල). "
-            "Your tone is informative, modern, and friendly."
-        )
-
-        user_prompt = (
-            f"Write a compelling and viral Facebook post in Sinhala about an exciting, recent topic "
-            f"under this category: {todays_theme}.\n\n"
-            "Requirements for the post:\n"
-            "1. An attention-grabbing Sinhala headline with relevant emojis.\n"
-            "2. A clear, easy-to-digest explanation of the trend/concept (2-3 concise paragraphs).\n"
-            "3. Why this matters or how Sri Lankan tech enthusiasts/general public can benefit from it.\n"
-            "4. An engaging open-ended question at the end to drive comments and engagement.\n"
-            "5. 5-7 popular, relevant hashtags (e.g., #TechNews #SinhalaTech #Technology #SriLanka #Innovation).\n"
-            "6. DO NOT use markdown formatting like **bold** or *italic* asterisks, as Facebook does not render markdown. Use clean spacing and emojis instead.\n"
-            "Return ONLY the post text."
-        )
-
-        logger.info("Requesting post generation from Gemini (gemini-1.5-flash)...")
+        logger.info("Requesting post generation from Gemini with strict LucidDreamsBot system instruction...")
         response = model.generate_content(
-            f"{system_prompt}\n\n{user_prompt}",
+            user_prompt,
             generation_config=genai.types.GenerationConfig(
                 temperature=0.7,
                 max_output_tokens=1000,
@@ -177,8 +181,19 @@ def generate_sinhala_post(api_key: str) -> str:
         if not response or not response.text:
             raise ValueError("Gemini returned an empty response.")
 
-        post_content = response.text.strip()
-        logger.info("Successfully generated post content (%d characters).", len(post_content))
+        raw_post_content = response.text.strip()
+        logger.info("Successfully generated raw post content (%d characters).", len(raw_post_content))
+
+        # Extract and log the image generation prompt if present
+        image_prompt_match = re.search(r"\[IMAGE_PROMPT:\s*(.*?)\]", raw_post_content, re.DOTALL)
+        if image_prompt_match:
+            extracted_image_prompt = image_prompt_match.group(1).strip()
+            logger.info("Extracted Image Prompt: %s", extracted_image_prompt)
+            # Remove [IMAGE_PROMPT: ...] tag from Facebook post caption to keep the public post clean
+            post_content = re.sub(r"\[IMAGE_PROMPT:\s*.*?\]", "", raw_post_content).strip()
+        else:
+            post_content = raw_post_content
+
         return post_content
 
     except Exception as exc:
