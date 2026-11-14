@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
 """
-Facebook Auto-Posting System in Sinhala
+Facebook Auto-Posting System in Sinhala (With Free AI Image Generation)
 Author: Senior Software Architect & Python Developer
 Description:
-    Generates a daily trending tech post in Sinhala using the Google Gemini API (Free Tier)
-    and automatically publishes it to a Facebook Page via Facebook Graph API.
+    Generates a daily trending tech post in Sinhala using the Google Gemini API (Free Tier),
+    generates a matching AI Image dynamically, and automatically publishes it to a Facebook Page.
 """
 
 from datetime import datetime, timezone
 import os
 import sys
-import re
 import socket
 import random
 import logging
-from typing import Dict, Any, Optional
+import re
+import urllib.parse
+from typing import Dict, Any, Optional, Tuple
 import requests
 import urllib3.util.connection as urllib_conn
 import google.generativeai as genai
 
-# Ensure IPv4 compatibility across all ISP environments (e.g. SLT / Dialog IPv6 routing stalls)
+# Ensure IPv4 compatibility across all ISP environments
 urllib_conn.allowed_gai_family = lambda: socket.AF_INET
 
 # Load local environment variables if python-dotenv is installed
@@ -39,10 +40,6 @@ logger = logging.getLogger("FacebookAutoPoster")
 
 
 def load_config() -> Dict[str, str]:
-    """
-    Validate and return required environment variables.
-    Exits application if any required secret is missing.
-    """
     required_keys = ["GEMINI_API_KEY", "FB_PAGE_ID", "FB_ACCESS_TOKEN"]
     config = {}
     missing_keys = []
@@ -57,7 +54,7 @@ def load_config() -> Dict[str, str]:
     if missing_keys:
         logger.critical(
             "Missing required environment variables: %s. "
-            "Please check your environment or GitHub Secrets.",
+            "Please check your .env file or GitHub Secrets.",
             ", ".join(missing_keys)
         )
         sys.exit(1)
@@ -66,10 +63,6 @@ def load_config() -> Dict[str, str]:
 
 
 def get_daily_theme() -> str:
-    """
-    Returns a thematic technology focus based on the current day of the week
-    to ensure high diversity and fresh content every single day.
-    """
     themes = {
         0: "Artificial Intelligence (AI), Generative AI, and Machine Learning innovations",
         1: "Cybersecurity, Online Privacy, Scam awareness, and Data Protection",
@@ -83,95 +76,78 @@ def get_daily_theme() -> str:
     return themes.get(weekday, "Modern Technology Trends")
 
 
-def get_thematic_image() -> str:
+def get_ai_image_url(prompt: str) -> str:
     """
-    Returns a thematic, high-resolution royalty-free technology image URL
-    based on the current day of the week to accompany the post.
+    Generates a 100% free AI image based on the prompt using Pollinations.ai
+    No API key required. Returns a direct image URL for Facebook to download.
     """
-    weekday = datetime.now(timezone.utc).weekday()
-    theme_images = {
-        0: [  # Monday: AI & Machine Learning
-            "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1200&auto=format&fit=crop&q=80",
-        ],
-        1: [  # Tuesday: Cybersecurity & Privacy
-            "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1200&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&auto=format&fit=crop&q=80",
-        ],
-        2: [  # Wednesday: Smart Gadgets & Mobile Tech
-            "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1200&auto=format&fit=crop&q=80",
-        ],
-        3: [  # Thursday: Cloud Computing & Software
-            "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1200&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&auto=format&fit=crop&q=80",
-        ],
-        4: [  # Friday: Future Tech & Robotics
-            "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1200&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80",
-        ],
-        5: [  # Saturday: Productivity & Tech Tools
-            "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80",
-        ],
-        6: [  # Sunday: Startups, Economy & Innovation
-            "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80",
-        ]
-    }
-    image_list = theme_images.get(weekday, theme_images[0])
-    return random.choice(image_list)
+    logger.info("Generating AI Image URL for prompt: %s", prompt)
+    
+    # URL encode the prompt to safely pass it in a web link
+    encoded_prompt = urllib.parse.quote(prompt)
+    
+    # Add a random seed so we get a unique image every time even for similar prompts
+    seed = random.randint(1, 999999)
+    
+    # Generate a 1200x630 (Facebook Post size) image
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1200&height=630&nologo=true&seed={seed}"
+    return image_url
 
 
-SYSTEM_PROMPT = """You are 'LucidDreamsBot', an expert Sri Lankan Tech Content Creator. 
-Your job is to automatically write highly engaging tech Facebook posts based on the topics provided to you. 
-Whenever you generate a post, you MUST strictly obey the following absolute rules:
-
-1. CORE LANGUAGE & TONE: Write the post entirely in natural, everyday conversational Sinhala script. Write exactly how a Sri Lankan would speak to a friend. Do not use formal, robotic translated language.
-2. ZERO FOREIGN CHARACTERS (CRITICAL): You are STRICTLY FORBIDDEN from using Hindi, Tamil, or any other foreign language characters. The output must contain ONLY Sinhala characters (and the limited English words allowed below).
-3. ENGLISH WORD LIMIT (STRICT): You are allowed a MAXIMUM of 5 English words in the entire post. Use them ONLY for unavoidable technical terms or specific App names. 
-4. NO ENGLISH IN BRACKETS: Never translate or explain Sinhala words by putting English words inside brackets (e.g., do NOT write "දත්ත (Data)"). If a technical term is needed, just transliterate it in Sinhala script.
-5. FORMATTING & STRUCTURE: No long paragraphs. Use short sentences and bullet points. Use 3 to 5 relevant emojis. You MUST include clear, actionable instructions formatted as 'පියවර 1:', 'පියවර 2:', etc.
-6. CALL TO ACTION (CTA): End every post with a specific, engaging question related to the topic.
-7. IMAGE GENERATION PROMPT: At the very end of your response, provide an English image generation prompt enclosed in [IMAGE_PROMPT: ...]. The image MUST perfectly and logically match the EXACT context of the post."""
-
-
-def generate_sinhala_post(api_key: str) -> str:
+def generate_sinhala_post(api_key: str) -> Tuple[str, str]:
     """
-    Generate an engaging daily technology trend post in Sinhala using Gemini API
-    following the strict LucidDreamsBot rules.
+    Generates the Sinhala post content and extracts the Image Prompt.
+    Returns: (Clean Post Content, Image Generation Prompt)
     """
     logger.info("Initializing Google Gemini API client...")
     try:
         genai.configure(api_key=api_key)
         
-        todays_theme = get_daily_theme()
-        logger.info("Today's technology focus theme: %s", todays_theme)
-
-        # Active Free-Tier High Efficiency Models with fallback and system_instruction
-        model_names = ["gemini-flash-lite-latest", "gemini-flash-latest"]
+        # Free-tier models (prioritize active gemini-flash-lite-latest)
+        model_names = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-1.5-flash"]
         model = None
         for name in model_names:
             try:
-                model = genai.GenerativeModel(
-                    model_name=name,
-                    system_instruction=SYSTEM_PROMPT
-                )
+                model = genai.GenerativeModel(model_name=name)
                 break
             except Exception:
                 continue
 
         if not model:
-            model = genai.GenerativeModel(
-                model_name="gemini-flash-lite-latest",
-                system_instruction=SYSTEM_PROMPT
-            )
+            model = genai.GenerativeModel(model_name="gemini-flash-lite-latest")
 
-        user_prompt = f"Write an engaging tech Facebook post on today's focus topic: {todays_theme}."
+        todays_theme = get_daily_theme()
+        logger.info("Today's technology focus theme: %s", todays_theme)
 
-        logger.info("Requesting post generation from Gemini with strict LucidDreamsBot system instruction...")
+        # STRICT SYSTEM RULES
+        system_prompt = (
+            "You are 'LucidDreamsBot', an expert Sri Lankan Tech Content Creator. "
+            "Your job is to automatically write highly engaging tech Facebook posts. "
+            "You MUST strictly obey these absolute rules:\n"
+            "1. CORE LANGUAGE & TONE: Write entirely in natural, conversational Sinhala script. Write exactly how a Sri Lankan would speak to a friend.\n"
+            "2. ZERO FOREIGN CHARACTERS: STRICTLY NO Hindi, Tamil, or any other foreign language characters. ONLY Sinhala characters.\n"
+            "3. ENGLISH WORD LIMIT: MAXIMUM of 5 English words in the entire post (only for unavoidable tech terms/app names).\n"
+            "4. NO ENGLISH IN BRACKETS: Never translate or explain Sinhala words by putting English words inside brackets (e.g., do NOT write 'දත්ත (Data)'). Transliterate in Sinhala script instead.\n"
+            "5. FORMATTING & STRUCTURE: No long paragraphs. Use short sentences, bullet points, and 3-5 emojis. DO NOT use markdown formatting like **bold** or *italic*.\n"
+            "6. ACTIONABLE STEPS: If explaining a tech trick, you MUST include clear, step-by-step instructions (e.g., 'පියවර 1:', 'පියවර 2:').\n"
+            "7. CTA: End every post with a specific engaging question related to the topic to drive comments.\n"
+            "8. IMAGE GENERATION PROMPT (CRITICAL): At the very end of your response, on a new line, provide an English image generation prompt enclosed in exactly these tags: [IMAGE_PROMPT: ...]. The image must perfectly and logically match the EXACT context of the post. It should be highly detailed, cinematic, and high-quality."
+        )
+
+        user_prompt = (
+            f"Write a compelling and viral Facebook post in Sinhala about an exciting, recent topic "
+            f"under this category: {todays_theme}.\n\n"
+            "Requirements for the post:\n"
+            "1. An attention-grabbing Sinhala headline with emojis.\n"
+            "2. A clear explanation with step-by-step instructions (if applicable).\n"
+            "3. Why this matters to Sri Lankan tech enthusiasts.\n"
+            "4. 5-7 popular hashtags (e.g., #TechNews #SinhalaTech #Technology #SriLanka).\n"
+            "Return ONLY the post text and the [IMAGE_PROMPT: ...] tag at the end."
+        )
+
+        logger.info("Requesting post generation from Gemini...")
         response = model.generate_content(
-            user_prompt,
+            f"{system_prompt}\n\n{user_prompt}",
             generation_config=genai.types.GenerationConfig(
                 temperature=0.7,
                 max_output_tokens=1000,
@@ -181,20 +157,22 @@ def generate_sinhala_post(api_key: str) -> str:
         if not response or not response.text:
             raise ValueError("Gemini returned an empty response.")
 
-        raw_post_content = response.text.strip()
-        logger.info("Successfully generated raw post content (%d characters).", len(raw_post_content))
-
-        # Extract and log the image generation prompt if present
-        image_prompt_match = re.search(r"\[IMAGE_PROMPT:\s*(.*?)\]", raw_post_content, re.DOTALL)
+        raw_content = response.text.strip()
+        
+        # Parse the [IMAGE_PROMPT: ...] out of the text
+        image_prompt_match = re.search(r'\[IMAGE_PROMPT:\s*(.*?)\]', raw_content, re.IGNORECASE | re.DOTALL)
+        
         if image_prompt_match:
-            extracted_image_prompt = image_prompt_match.group(1).strip()
-            logger.info("Extracted Image Prompt: %s", extracted_image_prompt)
-            # Remove [IMAGE_PROMPT: ...] tag from Facebook post caption to keep the public post clean
-            post_content = re.sub(r"\[IMAGE_PROMPT:\s*.*?\]", "", raw_post_content).strip()
+            image_prompt = image_prompt_match.group(1).strip()
+            # Remove the prompt block from the final Facebook post text
+            clean_post_content = re.sub(r'\[IMAGE_PROMPT:\s*.*?\]', '', raw_content, flags=re.IGNORECASE | re.DOTALL).strip()
         else:
-            post_content = raw_post_content
+            # Fallback if Gemini forgets the tag
+            image_prompt = f"High quality cinematic tech concept image representing {todays_theme}, 8k resolution, modern"
+            clean_post_content = raw_content
 
-        return post_content
+        logger.info("Successfully generated post and extracted image prompt.")
+        return clean_post_content, image_prompt
 
     except Exception as exc:
         logger.error("Failed to generate content with Gemini API: %s", exc, exc_info=True)
@@ -207,13 +185,9 @@ def publish_to_facebook(
     message: str, 
     image_url: Optional[str] = None
 ) -> Dict[str, Any]:
-    """
-    Publish a post to a Facebook Page via Facebook Graph API v21.0.
-    If image_url is provided, publishes as a high-engagement photo post.
-    Falls back gracefully to a standard text feed post if photo publishing encounters an error.
-    """
+    
     if image_url:
-        logger.info("Attempting to publish photo post with image: %s", image_url)
+        logger.info("Attempting to publish photo post with AI image...")
         photos_endpoint = f"https://graph.facebook.com/v21.0/{page_id}/photos"
         payload = {
             "url": image_url,
@@ -243,7 +217,7 @@ def publish_to_facebook(
         "message": message,
         "access_token": access_token
     }
-    logger.info("Publishing standard text post to Facebook Page ID: %s...", page_id)
+    logger.info("Publishing standard text post to Facebook...")
     try:
         response = requests.post(feed_endpoint, data=payload, timeout=30)
         res_data = response.json()
@@ -256,29 +230,32 @@ def publish_to_facebook(
         error_info = res_data.get("error", {})
         error_msg = error_info.get("message", "Unknown error")
         error_code = error_info.get("code", "N/A")
-        logger.error("Facebook Graph API error [Code %s]: %s (HTTP Status: %d)", error_code, error_msg, response.status_code)
+        logger.error("Facebook Graph API error [Code %s]: %s", error_code, error_msg)
         response.raise_for_status()
         return res_data
 
     except requests.exceptions.RequestException as req_err:
-        logger.error("Network or HTTP request error while communicating with Facebook API: %s", req_err)
+        logger.error("Network error while communicating with Facebook API: %s", req_err)
         raise
 
 
 def main() -> None:
-    """
-    Main orchestration function.
-    """
     logger.info("=== Starting Facebook Daily Auto-Post Workflow ===")
     try:
         config = load_config()
-        post_content = generate_sinhala_post(api_key=config["GEMINI_API_KEY"])
-        image_url = get_thematic_image()
+        
+        # 1. Get the Sinhala post text AND the English Image Prompt from Gemini
+        post_content, image_prompt = generate_sinhala_post(api_key=config["GEMINI_API_KEY"])
+        
+        # 2. Generate a 100% matching AI image URL for free
+        ai_image_url = get_ai_image_url(image_prompt)
+        
+        # 3. Publish both to Facebook
         publish_to_facebook(
             page_id=config["FB_PAGE_ID"],
             access_token=config["FB_ACCESS_TOKEN"],
             message=post_content,
-            image_url=image_url
+            image_url=ai_image_url
         )
         logger.info("=== Auto-Post Workflow Completed Successfully ===")
     except Exception as exc:
@@ -288,4 +265,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
