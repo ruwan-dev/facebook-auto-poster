@@ -103,7 +103,7 @@ def generate_sinhala_post(api_key: str) -> Tuple[str, str]:
     try:
         genai.configure(api_key=api_key)
         
-        # Free-tier models (prioritize active gemini-flash-lite-latest)
+        # Free-tier high efficiency models (prioritizing active gemini-flash-lite-latest)
         model_names = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-1.5-flash"]
         model = None
         for name in model_names:
