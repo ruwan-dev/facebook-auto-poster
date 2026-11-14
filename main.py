@@ -10,6 +10,7 @@ Description:
 from datetime import datetime, timezone
 import os
 import sys
+import json
 import socket
 import random
 import logging
@@ -242,6 +243,58 @@ def publish_to_facebook(
         raise
 
 
+def log_post_to_dashboard(
+    post_id: str,
+    content: str,
+    theme: str,
+    image_url: Optional[str] = None,
+    image_prompt: Optional[str] = None
+) -> None:
+    """
+    Appends the published post to docs/posts.json for the GitHub Pages dashboard.
+    """
+    docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
+    os.makedirs(docs_dir, exist_ok=True)
+    posts_file = os.path.join(docs_dir, "posts.json")
+
+    posts = []
+    if os.path.exists(posts_file):
+        try:
+            with open(posts_file, "r", encoding="utf-8") as f:
+                posts = json.load(f)
+        except Exception as e:
+            logger.warning("Could not read existing posts.json (%s), creating fresh list.", e)
+            posts = []
+
+    # Check if post_id already exists to prevent duplicates
+    if any(p.get("id") == post_id for p in posts):
+        logger.info("Post %s already logged in posts.json.", post_id)
+        return
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    new_entry = {
+        "id": post_id,
+        "timestamp": now_iso,
+        "theme": theme,
+        "content": content,
+        "image_url": image_url or "",
+        "image_prompt": image_prompt or "",
+        "facebook_url": f"https://www.facebook.com/{post_id}",
+        "type": "photo" if image_url else "feed",
+        "status": "published"
+    }
+
+    # Prepend new post so the newest appears first on the dashboard
+    posts.insert(0, new_entry)
+
+    try:
+        with open(posts_file, "w", encoding="utf-8") as f:
+            json.dump(posts, f, ensure_ascii=False, indent=2)
+        logger.info("Successfully recorded post %s to docs/posts.json for GitHub Pages Dashboard.", post_id)
+    except Exception as exc:
+        logger.error("Failed to write to docs/posts.json: %s", exc)
+
+
 def main() -> None:
     logger.info("=== Starting Facebook Daily Auto-Post Workflow ===")
     try:
@@ -254,12 +307,24 @@ def main() -> None:
         ai_image_url = get_ai_image_url(image_prompt)
         
         # 3. Publish both to Facebook
-        publish_to_facebook(
+        fb_response = publish_to_facebook(
             page_id=config["FB_PAGE_ID"],
             access_token=config["FB_ACCESS_TOKEN"],
             message=post_content,
             image_url=ai_image_url
         )
+
+        # 4. Record to GitHub Pages Dashboard
+        post_id = fb_response.get("post_id", fb_response.get("id", "N/A"))
+        todays_theme = get_daily_theme()
+        log_post_to_dashboard(
+            post_id=post_id,
+            content=post_content,
+            theme=todays_theme,
+            image_url=ai_image_url,
+            image_prompt=image_prompt
+        )
+
         logger.info("=== Auto-Post Workflow Completed Successfully ===")
     except Exception as exc:
         logger.critical("Auto-post execution failed: %s", exc)

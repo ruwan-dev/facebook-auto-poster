@@ -6,6 +6,9 @@ on:
     - cron: '30 2 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab for instant testing
 
+permissions:
+  contents: write
+
 jobs:
   post-to-facebook:
     runs-on: ubuntu-latest
@@ -33,3 +36,10 @@ jobs:
         run: |
           python main.py
 
+      - name: Commit and push updated dashboard data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/posts.json
+          git diff-index --quiet HEAD || git commit -m "chore: update dashboard posts data [skip ci]"
+          git push

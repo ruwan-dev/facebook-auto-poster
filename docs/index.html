@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lucid Dreams | Facebook Auto-Post Dashboard</title>
+  
+  <!-- Tailwind CSS & Google Fonts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans Sinhala', 'sans-serif'],
+            sinhala: ['Noto Sans Sinhala', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#10b981',
+              600: '#059669',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .sinhala-text {
+      font-family: 'Noto Sans Sinhala', 'Inter', sans-serif;
+      line-height: 1.7;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-indigo-500 selection:text-white">
+
+  <!-- Background Ambient Glow -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative z-10 flex flex-col min-h-screen">
+    
+    <!-- Header / Navbar -->
+    <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-30">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold text-lg">
+            LD
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+              Lucid Dreams <span class="hidden sm:inline-block text-xs font-normal text-slate-400">| Auto-Post Stream</span>
+            </h1>
+            <p class="text-xs text-slate-400">AI Daily Sinhala Tech Publications</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Auto-Pilot Active
+          </span>
+          <a href="https://www.facebook.com/profile.php?id=986508884536697" target="_blank" rel="noopener"
+             class="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition shadow-sm">
+            <i class="fa-brands fa-facebook-f"></i> Facebook Page
+          </a>
+          <a href="https://github.com/ruwan-dev/facebook-auto-poster" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            <i class="fa-brands fa-github"></i>
+          </a>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+      <!-- Metrics Row -->
+      <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="glass-card rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Total Published</span>
+            <i class="fa-solid fa-paper-plane text-indigo-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="stat-total" class="text-3xl font-extrabold text-white">--</span>
+            <span class="text-xs text-emerald-400 font-medium">100% Free Tier</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Live recorded posts</p>
+        </div>
+
+        <div class="glass-card rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Next Scheduled Run</span>
+            <i class="fa-regular fa-clock text-purple-400"></i>
+          </div>
+          <div class="mt-2">
+            <span class="text-xl sm:text-2xl font-bold text-white">08:00 AM</span>
+            <span class="text-xs text-slate-400">SLT (02:30 UTC)</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Daily GitHub Actions</p>
+        </div>
+
+        <div class="glass-card rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Content Engine</span>
+            <i class="fa-solid fa-brain text-amber-400"></i>
+          </div>
+          <div class="mt-2">
+            <span class="text-lg sm:text-xl font-bold text-white truncate block">Gemini 3.8 / Flash</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Google AI Free Tier</p>
+        </div>
+
+        <div class="glass-card rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Visual Engine</span>
+            <i class="fa-solid fa-wand-magic-sparkles text-pink-400"></i>
+          </div>
+          <div class="mt-2">
+            <span class="text-lg sm:text-xl font-bold text-white">Pollinations AI</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Dynamic 1200x630 AI Render</p>
+        </div>
+
+      </section>
+
+      <!-- Filter & Search Toolbar -->
+      <section class="glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        
+        <div class="relative w-full sm:w-96">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" id="search-input" placeholder="Search posts, themes, or keywords..."
+                 class="w-full pl-9 pr-4 py-2 bg-slate-900/90 border border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition">
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button id="btn-refresh" onclick="loadPosts()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 flex items-center gap-2 transition active:scale-95">
+            <i class="fa-solid fa-rotate-right" id="refresh-icon"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+
+      </section>
+
+      <!-- Posts Stream Container -->
+      <section>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-timeline text-indigo-400"></i> Published Posts Stream
+          </h2>
+          <span id="filtered-count" class="text-xs text-slate-400">Loading...</span>
+        </div>
+
+        <div id="posts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Dynamically populated via JavaScript -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden glass-card rounded-3xl p-12 text-center max-w-md mx-auto my-12">
+          <i class="fa-solid fa-magnifying-glass text-4xl text-slate-600 mb-3"></i>
+          <h3 class="text-base font-semibold text-white">No posts found</h3>
+          <p class="text-xs text-slate-400 mt-1">Try adjusting your search query or check back later.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950/70 py-6 text-center text-xs text-slate-500">
+      <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <span>© 2026 Lucid Dreams Tech Auto-Poster • Powered by Google Gemini & GitHub Actions</span>
+        <span>Hosted 100% Free on <a href="https://pages.github.com" target="_blank" class="text-slate-400 hover:text-white underline">GitHub Pages</a></span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Image Lightbox Modal -->
+  <div id="lightbox" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden items-center justify-center p-4 transition-opacity" onclick="closeLightbox()">
+    <div class="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+      <button onclick="closeLightbox()" class="absolute -top-10 right-0 text-white text-xl hover:text-slate-300">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <img id="lightbox-img" src="" alt="Post Visual" class="max-w-full max-h-[80vh] rounded-2xl shadow-2xl object-contain border border-slate-700">
+      <p id="lightbox-caption" class="text-xs text-slate-300 text-center mt-3 max-w-2xl"></p>
+    </div>
+  </div>
+
+  <!-- JavaScript Application -->
+  <script>
+    let allPosts = [];
+
+    async function loadPosts() {
+      const refreshIcon = document.getElementById('refresh-icon');
+      refreshIcon.classList.add('animate-spin');
+      
+      try {
+        const res = await fetch(`posts.json?t=${Date.now()}`);
+        if (!res.ok) throw new Error("Could not load posts.json");
+        allPosts = await res.json();
+        
+        // Update stats
+        document.getElementById('stat-total').textContent = allPosts.length;
+        
+        renderPosts(allPosts);
+      } catch (err) {
+        console.error("Failed to load posts:", err);
+        document.getElementById('posts-grid').innerHTML = `
+          <div class="col-span-full glass-card p-8 rounded-2xl text-center text-rose-400">
+            <i class="fa-solid fa-circle-exclamation text-3xl mb-2"></i>
+            <p class="font-medium text-sm">Failed to load posts data.</p>
+            <p class="text-xs text-slate-400 mt-1">${err.message}</p>
+          </div>
+        `;
+      } finally {
+        setTimeout(() => refreshIcon.classList.remove('animate-spin'), 600);
+      }
+    }
+
+    function renderPosts(posts) {
+      const grid = document.getElementById('posts-grid');
+      const emptyState = document.getElementById('empty-state');
+      const filteredCount = document.getElementById('filtered-count');
+
+      grid.innerHTML = '';
+      filteredCount.textContent = `Showing ${posts.length} ${posts.length === 1 ? 'post' : 'posts'}`;
+
+      if (posts.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      posts.forEach(post => {
+        const dateObj = new Date(post.timestamp);
+        const formattedDate = dateObj.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const card = document.createElement('article');
+        card.className = "glass-card rounded-2xl overflow-hidden flex flex-col justify-between hover:border-slate-700 transition duration-300 group shadow-lg";
+
+        const hasImage = post.image_url && post.image_url.trim() !== '';
+
+        card.innerHTML = `
+          <div>
+            ${hasImage ? `
+              <div class="relative aspect-video overflow-hidden bg-slate-900 cursor-pointer" onclick="openLightbox('${post.image_url}', '${escapeHtml(post.image_prompt || post.theme)}')">
+                <img src="${post.image_url}" alt="${escapeHtml(post.theme || 'Tech visual')}" 
+                     class="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                     loading="lazy"
+                     onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1518770660439-4636190af475?w=800';">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                <span class="absolute bottom-2 left-2 inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-900/90 text-slate-300 border border-slate-700/60 backdrop-blur-sm">
+                  <i class="fa-solid fa-wand-magic-sparkles text-pink-400"></i> AI Visual
+                </span>
+                <span class="absolute top-2 right-2 text-xs text-white/80 opacity-0 group-hover:opacity-100 transition p-1.5 rounded-full bg-slate-900/80">
+                  <i class="fa-solid fa-expand"></i>
+                </span>
+              </div>
+            ` : `
+              <div class="h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+            `}
+
+            <div class="p-5 space-y-3">
+              <div class="flex items-center justify-between text-[11px] text-slate-400">
+                <span class="flex items-center gap-1.5 font-medium">
+                  <i class="fa-regular fa-calendar"></i> ${formattedDate}
+                </span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <i class="fa-solid fa-check"></i> Published
+                </span>
+              </div>
+
+              ${post.theme ? `
+                <div class="text-xs font-semibold text-indigo-400 line-clamp-1" title="${escapeHtml(post.theme)}">
+                  <i class="fa-solid fa-tag text-[10px] mr-1"></i> ${escapeHtml(post.theme)}
+                </div>
+              ` : ''}
+
+              <div class="sinhala-text text-sm text-slate-200 whitespace-pre-line line-clamp-6 leading-relaxed select-text">
+                ${escapeHtml(post.content)}
+              </div>
+
+              ${post.image_prompt ? `
+                <div class="mt-2 text-[11px] text-slate-400 bg-slate-900/60 rounded-lg p-2.5 border border-slate-800">
+                  <span class="font-semibold text-slate-300 block mb-1 flex items-center gap-1">
+                    <i class="fa-solid fa-terminal text-[10px] text-purple-400"></i> Extracted Image Brief:
+                  </span>
+                  <span class="italic text-slate-400 line-clamp-2">${escapeHtml(post.image_prompt)}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="p-5 pt-0 border-t border-slate-800/60 mt-4 flex items-center justify-between">
+            <button onclick="copyPostText('${escapeHtml(post.content)}')" class="text-xs text-slate-400 hover:text-white transition flex items-center gap-1.5 py-1">
+              <i class="fa-regular fa-copy"></i> Copy
+            </button>
+            <a href="${post.facebook_url || `https://www.facebook.com/${post.id}`}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition shadow-sm">
+              <i class="fa-brands fa-facebook-f text-[11px]"></i> View on FB
+            </a>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    // Search filter
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      if (!query) {
+        renderPosts(allPosts);
+        return;
+      }
+
+      const filtered = allPosts.filter(p => {
+        return (p.content && p.content.toLowerCase().includes(query)) ||
+               (p.theme && p.theme.toLowerCase().includes(query)) ||
+               (p.image_prompt && p.image_prompt.toLowerCase().includes(query)) ||
+               (p.id && p.id.toLowerCase().includes(query));
+      });
+
+      renderPosts(filtered);
+    });
+
+    // Lightbox Modal
+    function openLightbox(url, caption) {
+      document.getElementById('lightbox-img').src = url;
+      document.getElementById('lightbox-caption').textContent = caption;
+      document.getElementById('lightbox').classList.remove('hidden');
+      document.getElementById('lightbox').classList.add('flex');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.add('hidden');
+      document.getElementById('lightbox').classList.remove('flex');
+    }
+
+    // Copy Helper
+    function copyPostText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Sinhala post copied to clipboard!");
+      }).catch(err => {
+        console.error("Copy failed:", err);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Auto-load on startup
+    window.addEventListener('DOMContentLoaded', loadPosts);
+  </script>
+</body>
+</html>
