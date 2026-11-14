@@ -11,8 +11,9 @@ from datetime import datetime, timezone
 import os
 import sys
 import socket
+import random
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import requests
 import urllib3.util.connection as urllib_conn
 import google.generativeai as genai
@@ -81,6 +82,46 @@ def get_daily_theme() -> str:
     return themes.get(weekday, "Modern Technology Trends")
 
 
+def get_thematic_image() -> str:
+    """
+    Returns a thematic, high-resolution royalty-free technology image URL
+    based on the current day of the week to accompany the post.
+    """
+    weekday = datetime.now(timezone.utc).weekday()
+    theme_images = {
+        0: [  # Monday: AI & Machine Learning
+            "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1200&auto=format&fit=crop&q=80",
+        ],
+        1: [  # Tuesday: Cybersecurity & Privacy
+            "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1200&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&auto=format&fit=crop&q=80",
+        ],
+        2: [  # Wednesday: Smart Gadgets & Mobile Tech
+            "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1200&auto=format&fit=crop&q=80",
+        ],
+        3: [  # Thursday: Cloud Computing & Software
+            "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1200&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&auto=format&fit=crop&q=80",
+        ],
+        4: [  # Friday: Future Tech & Robotics
+            "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1200&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80",
+        ],
+        5: [  # Saturday: Productivity & Tech Tools
+            "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80",
+        ],
+        6: [  # Sunday: Startups, Economy & Innovation
+            "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80",
+        ]
+    }
+    image_list = theme_images.get(weekday, theme_images[0])
+    return random.choice(image_list)
+
+
 def generate_sinhala_post(api_key: str) -> str:
     """
     Generate an engaging daily technology trend post in Sinhala using Gemini API.
@@ -145,43 +186,64 @@ def generate_sinhala_post(api_key: str) -> str:
         raise
 
 
-def publish_to_facebook(page_id: str, access_token: str, message: str) -> Dict[str, Any]:
+def publish_to_facebook(
+    page_id: str, 
+    access_token: str, 
+    message: str, 
+    image_url: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Publish a status post to a Facebook Page via Facebook Graph API v21.0.
+    Publish a post to a Facebook Page via Facebook Graph API v21.0.
+    If image_url is provided, publishes as a high-engagement photo post.
+    Falls back gracefully to a standard text feed post if photo publishing encounters an error.
     """
-    graph_api_url = f"https://graph.facebook.com/v21.0/{page_id}/feed"
+    if image_url:
+        logger.info("Attempting to publish photo post with image: %s", image_url)
+        photos_endpoint = f"https://graph.facebook.com/v21.0/{page_id}/photos"
+        payload = {
+            "url": image_url,
+            "caption": message,
+            "access_token": access_token
+        }
+        try:
+            response = requests.post(photos_endpoint, data=payload, timeout=40)
+            res_data = response.json()
+            if response.status_code == 200 and "id" in res_data:
+                post_id = res_data.get("post_id", res_data["id"])
+                logger.info("Photo post published successfully! Facebook Post ID: %s", post_id)
+                return res_data
+            else:
+                err_msg = res_data.get("error", {}).get("message", "Unknown error")
+                err_code = res_data.get("error", {}).get("code", "N/A")
+                logger.warning(
+                    "Photo post failed [Code %s]: %s. Falling back to standard text post...",
+                    err_code, err_msg
+                )
+        except Exception as photo_err:
+            logger.warning("Error uploading photo (%s). Falling back to standard text post...", photo_err)
+
+    # Standard feed post fallback
+    feed_endpoint = f"https://graph.facebook.com/v21.0/{page_id}/feed"
     payload = {
         "message": message,
         "access_token": access_token
     }
-
-    logger.info("Publishing post to Facebook Page ID: %s...", page_id)
+    logger.info("Publishing standard text post to Facebook Page ID: %s...", page_id)
     try:
-        response = requests.post(
-            graph_api_url,
-            data=payload,
-            timeout=30  # 30-second network timeout
-        )
+        response = requests.post(feed_endpoint, data=payload, timeout=30)
+        res_data = response.json()
 
-        response_data = response.json()
+        if response.status_code == 200 and "id" in res_data:
+            post_id = res_data["id"]
+            logger.info("Text post published successfully! Facebook Post ID: %s", post_id)
+            return res_data
 
-        if response.status_code == 200 and "id" in response_data:
-            post_id = response_data["id"]
-            logger.info("Post published successfully! Facebook Post ID: %s", post_id)
-            return response_data
-
-        # Handle Facebook API errors
-        error_info = response_data.get("error", {})
+        error_info = res_data.get("error", {})
         error_msg = error_info.get("message", "Unknown error")
         error_code = error_info.get("code", "N/A")
-        error_subcode = error_info.get("error_subcode", "N/A")
-
-        logger.error(
-            "Facebook Graph API error [Code %s, Subcode %s]: %s (HTTP Status: %d)",
-            error_code, error_subcode, error_msg, response.status_code
-        )
+        logger.error("Facebook Graph API error [Code %s]: %s (HTTP Status: %d)", error_code, error_msg, response.status_code)
         response.raise_for_status()
-        return response_data
+        return res_data
 
     except requests.exceptions.RequestException as req_err:
         logger.error("Network or HTTP request error while communicating with Facebook API: %s", req_err)
@@ -196,10 +258,12 @@ def main() -> None:
     try:
         config = load_config()
         post_content = generate_sinhala_post(api_key=config["GEMINI_API_KEY"])
+        image_url = get_thematic_image()
         publish_to_facebook(
             page_id=config["FB_PAGE_ID"],
             access_token=config["FB_ACCESS_TOKEN"],
-            message=post_content
+            message=post_content,
+            image_url=image_url
         )
         logger.info("=== Auto-Post Workflow Completed Successfully ===")
     except Exception as exc:
