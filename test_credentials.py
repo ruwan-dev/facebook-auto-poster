@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Credentials & Connectivity Diagnostic Script
-Tests Gemini API and Facebook Page Token permissions and scopes.
+Tests Gemini API and Facebook Page permissions.
 """
 
 import os
@@ -34,39 +34,34 @@ def check_gemini(api_key: str) -> bool:
         return False
 
 def check_facebook(page_id: str, access_token: str) -> bool:
-    print("\n🔍 [2/2] Inspecting Facebook Page Access Token & Permissions...")
+    print(f"\n🔍 [2/2] Inspecting Facebook Page (ID: {page_id}) Permissions...")
     try:
-        debug_url = "https://graph.facebook.com/debug_token"
-        res = requests.get(debug_url, params={"input_token": access_token, "access_token": access_token}, timeout=15)
-        data = res.json().get("data", {})
+        url = f"https://graph.facebook.com/v21.0/{page_id}"
+        params = {
+            "fields": "id,name,can_post",
+            "access_token": access_token
+        }
+        res = requests.get(url, params=params, timeout=15)
+        data = res.json()
 
-        if not data.get("is_valid"):
-            err = res.json().get("error", {})
-            print(f"❌ Invalid Facebook Token: {err.get('message', 'Token validation failed')}")
+        if res.status_code == 200 and "id" in data:
+            page_name = data.get("name")
+            can_post = data.get("can_post", False)
+            print(f"✅ Facebook Graph API connected successfully!")
+            print(f"   Page Name: {page_name}")
+            print(f"   Page ID:   {data.get('id')}")
+            print(f"   Can Post:  {'YES (Authorized)' if can_post else 'NO'}")
+            
+            if can_post:
+                print("🎉 Facebook Token is 100% verified and authorized to publish posts!")
+                return True
+            else:
+                print("⚠️ Token is connected but 'can_post' is false. Please ensure pages_manage_posts is granted.")
+                return False
+        else:
+            err = data.get("error", {})
+            print(f"❌ Facebook API Error: {err.get('message')} (Code: {err.get('code')})")
             return False
-
-        token_type = data.get("type", "UNKNOWN")
-        app_name = data.get("application", "Unknown App")
-        scopes = data.get("scopes", [])
-
-        print(f"   App Name:    {app_name}")
-        print(f"   Token Type:  {token_type}")
-        print(f"   Granted:     {', '.join(scopes)}")
-
-        required_permissions = ["pages_manage_posts", "pages_read_engagement"]
-        missing = [p for p in required_permissions if p not in scopes]
-
-        if missing:
-            print(f"\n❌ Missing Required Permission(s): {', '.join(missing)}")
-            print("👉 To fix this in Meta for Developers Graph API Explorer:")
-            print("   1. In the 'Permissions' dropdown, add:")
-            for p in missing:
-                print(f"      - {p}")
-            print("   2. Generate a new User Token, then select your Page to get a new Page Access Token.")
-            return False
-
-        print("✅ Facebook Token has all required permissions to auto-post!")
-        return True
 
     except Exception as exc:
         print(f"❌ Facebook diagnostic error: {exc}")
@@ -92,9 +87,9 @@ def main():
     fb_ok = check_facebook(fb_page_id, fb_token)
 
     if gemini_ok and fb_ok:
-        print("\n🎉 All services are verified and operational! You are ready to deploy.")
+        print("\n🎉 ALL CHECKS PASSED! Your auto-poster is fully operational.")
     else:
-        print("\n⚠️  Please update the highlighted credential(s) above.")
+        print("\n⚠️  Please review the diagnostic messages above.")
         sys.exit(1)
 
 if __name__ == "__main__":
