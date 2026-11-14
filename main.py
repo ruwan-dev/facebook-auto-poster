@@ -171,6 +171,9 @@ def generate_sinhala_post(api_key: str) -> Tuple[str, str]:
             image_prompt = f"High quality cinematic tech concept image representing {todays_theme}, 8k resolution, modern"
             clean_post_content = raw_content
 
+        # Sanitizer: Enforce Zero Foreign Characters (strips accidental non-Sinhala Indic/Asian script tokens)
+        clean_post_content = re.sub(r'[\u0900-\u0D7F\u0E00-\u0FFF]', '', clean_post_content)
+
         logger.info("Successfully generated post and extracted image prompt.")
         return clean_post_content, image_prompt
 
