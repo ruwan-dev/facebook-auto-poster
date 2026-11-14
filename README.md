@@ -1,6 +1,10 @@
 # 🚀 100% Free Daily Facebook Auto-Posting System (Sinhala Tech Trends)
 
-An automated serverless pipeline powered by **Google Gemini API (Free Tier)**, **Facebook Graph API**, and **GitHub Actions** (free monthly CI/CD quota) to create and publish daily Sinhala technology posts to a Facebook Page.
+An automated serverless pipeline powered by **Google Gemini API (Free Tier)**, **Pollinations AI**, **Facebook Graph API**, and **GitHub Actions** to create, illustrate, and publish daily Sinhala technology posts to a Facebook Page.
+
+### 🌐 Live Web Dashboard
+View all published posts, AI generated visuals, and automation statistics:
+👉 **[https://ruwan-dev.github.io/facebook-auto-poster/](https://ruwan-dev.github.io/facebook-auto-poster/)**
 
 ---
 
@@ -11,7 +15,10 @@ C:\Users\RuwanPathirana\Desktop\OV\facebook-auto-poster\
 ├── .github/
 │   └── workflows/
 │       └── auto_post.yml       # GitHub Actions workflow (runs daily at 2:30 AM UTC)
-├── main.py                     # Python orchestrator (Gemini AI + FB Graph API)
+├── docs/                       # 🌟 GitHub Pages Live Dashboard
+│   ├── index.html              # Modern glassmorphism web dashboard UI
+│   └── posts.json              # Automated publication history and metadata
+├── main.py                     # Python orchestrator (Gemini AI + Pollinations + FB API)
 ├── requirements.txt            # Python dependencies
 ├── test_credentials.py         # Diagnostic test script
 ├── .env.example                # Template for local testing
