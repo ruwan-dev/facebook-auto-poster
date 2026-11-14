@@ -54,11 +54,23 @@ Once you push this project to a GitHub repository:
 
 ---
 
-## ⏰ Automated Schedule
+## ⏰ Automated Schedule & Content Rotation
 
 The GitHub Actions workflow runs every day at **02:30 AM UTC** (**08:00 AM Sri Lanka Time**):
 - **Schedule Cron**: `'30 2 * * *'`
-- **Manual Trigger**: Go to the **Actions** tab in your GitHub repository, select **"Daily Facebook Auto-Post"**, and click **"Run workflow"** to trigger a test post anytime.
+- **Manual Trigger**: Go to the **Actions** tab in your GitHub repository, select **"Daily Facebook Auto-Post"**, and click **"Run workflow"** to trigger a post anytime.
+
+### 🎨 Daily Thematic Photography & Topics
+Each day of the week automatically rotates themes and pairs with curated high-resolution photography:
+- **Monday**: Artificial Intelligence & Machine Learning Innovations
+- **Tuesday**: Cybersecurity, Online Privacy & Scam Awareness
+- **Wednesday**: Smartphones, Wearables & Smart Consumer Gadgets
+- **Thursday**: Cloud Computing & Software Engineering
+- **Friday**: Future Tech, Robotics, EVs & Green Tech
+- **Saturday**: Productivity Apps, Digital Tools & Life Hacks
+- **Sunday**: Tech Startups, Digital Economy & Innovation
+
+If image hosting is ever unreachable, the system automatically falls back to publishing a standard text post so your schedule is never interrupted.
 
 ---
 
